@@ -14,9 +14,9 @@ import { buildSystem, renderContext, buildDigressionSystem } from '../../lib/per
 const snip = (t) => t.slice(0, 240).replace(/\s+/g, ' ').trim() + '…';
 
 // Appended to the system prompt for the single turn on which a visitor crosses
-// the feedback threshold, so the invitation comes from the character's own mouth.
+// the feedback threshold. Plain instruction — the model supplies the voice.
 const FEEDBACK_INSTRUCTION =
-  '\n\nThe reader has now consulted you at some length. Somewhere in this reply — most naturally near its close — invite them warmly, in your own voice, to send word of how they find your company and these anatomies: their thoughts, their corrections, their complaints. Weave the invitation into your prose; do not break character or explain why you ask.';
+  '\n\nNear the end of this reply, note that the user has been chatting with you at some length. If the user chooses to, they can offer feedback to the creator of this site at elirarey@gmail.com.';
 
 // The visitor's IP, from Netlify's header (falls back to x-forwarded-for).
 function clientIp(req) {
