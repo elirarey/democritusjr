@@ -51,10 +51,10 @@ async function meterAndMaybePrompt(req) {
       prompt = true;
     }
     await store.setJSON(key, rec);
-    return { prompt, count: rec.count };
+    return { prompt, count: rec.count, prompted: rec.prompted, threshold };
   } catch (err) {
     console.warn('[meter] skipped:', err?.message);
-    return { prompt: false, count: 0, note: 'blobs-error: ' + (err?.message || '') };
+    return { prompt: false, count: 0, threshold, note: 'blobs-error: ' + (err?.message || '') };
   }
 }
 
