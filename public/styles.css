@@ -360,6 +360,14 @@ body {
 .references a.ref:hover { text-decoration: underline; }
 
 /* ---------- reading page (read.html) ---------- */
+/* The global reset sets body { height: 100% } (needed for the chat layout),
+   but that caps the body box at one viewport, so the sticky header unsticks
+   once you scroll past the first screen. Let the reading body grow to its
+   full content height so the header stays put all the way down. */
+body.reading {
+  height: auto;
+  min-height: 100%;
+}
 .rd-topbar {
   position: sticky;
   top: 0;
