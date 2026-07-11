@@ -29,23 +29,12 @@ export default async (req) => {
     if (given !== required) return json({ error: 'unauthorized' }, 401);
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return json({ error: 'Server missing ANTHROPIC_API_KEY' }, 500);
-
-  // Read the raw body ourselves (more robust than req.json() across runtimes)
-  // and keep it around so we can report exactly what arrived if parsing/shape
-  // is wrong.
-  let rawBody = '';
-  try {
-    rawBody = await req.text();
-  } catch (e) {
-    rawBody = '';
-  }
+  // Read the raw body (robust across runtimes).
   let payload;
   try {
-    payload = JSON.parse(rawBody || '{}');
+    payload = JSON.parse((await req.text()) || '{}');
   } catch {
-    return json({ error: 'Invalid JSON', debug: { rawLen: rawBody.length, rawPreview: rawBody.slice(0, 200) } }, 400);
+    return json({ error: 'Invalid request body' }, 400);
   }
 
   // Normalize + bound the conversation history the client sent.
@@ -62,22 +51,14 @@ export default async (req) => {
     .map((m) => ({ role: m.role, content: m.content.slice(0, MAX_CHARS) }));
 
   const lastUser = [...messages].reverse().find((m) => m.role === 'user');
-  if (!lastUser) {
-    return json(
-      {
-        error: 'No user message',
-        debug: {
-          rawLen: rawBody.length,
-          rawPreview: rawBody.slice(0, 200),
-          method: req.method,
-          contentType: req.headers.get('content-type'),
-          payloadKeys: payload && typeof payload === 'object' ? Object.keys(payload) : typeof payload,
-          messagesType: Array.isArray(payload?.messages) ? `array(${payload.messages.length})` : typeof payload?.messages,
-        },
-      },
-      400
-    );
-  }
+
+  // No question present -> this is the login / status check the gate makes on
+  // page load and on password entry. The password already passed above, so
+  // report access is granted without invoking the model.
+  if (!lastUser) return json({ ok: true }, 200);
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return json({ error: 'Server missing ANTHROPIC_API_KEY' }, 500);
 
   // ---- retrieve grounding for the latest question ----
   let method = 'keyword';

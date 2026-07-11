@@ -2,6 +2,7 @@
 // NDJSON from /api/chat, renders the answer + grounding sidebar, and handles the
 // shared-password gate.
 
+const FN = '/.netlify/functions/chat';
 const state = []; // [{ role: 'user'|'assistant', content: string }]
 let password = sessionStorage.getItem('site-password') || '';
 let busy = false;
@@ -72,18 +73,67 @@ function renderSources(method, sources) {
   }
 }
 
-// ---------- gate ----------
+// ---------- authentication gate ----------
+// Authentication is its OWN step, done before any question exists. The function
+// treats a request with an empty message list as a pure access check:
+// 200 = allowed (correct password, or the site has no password), 401 = denied.
+
+async function checkAccess(pw) {
+  try {
+    const res = await fetch(FN, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...(pw ? { 'x-site-password': pw } : {}),
+      },
+      body: JSON.stringify({ messages: [] }),
+    });
+    return res.status;
+  } catch {
+    return 0; // network error
+  }
+}
+
 function showGate() {
   gate.hidden = false;
   gateInput.focus();
 }
-gateForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  password = gateInput.value;
-  sessionStorage.setItem('site-password', password);
+
+function unlock() {
   gate.hidden = true;
   gateError.hidden = true;
-  streamAnswer(); // retry the pending turn
+  input.disabled = false;
+  sendBtn.disabled = false;
+  input.focus();
+}
+
+// On load: go straight in if the site is open or we already hold a valid
+// password; otherwise present the login gate.
+async function init() {
+  const status = await checkAccess(password);
+  if (status === 200) unlock();
+  else showGate();
+}
+
+gateForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const attempt = gateInput.value;
+  const submitBtn = gateForm.querySelector('button');
+  submitBtn.disabled = true;
+  const status = await checkAccess(attempt);
+  submitBtn.disabled = false;
+  if (status === 200) {
+    password = attempt;
+    sessionStorage.setItem('site-password', password);
+    unlock();
+  } else if (status === 401) {
+    gateError.textContent = 'That is not the word.';
+    gateError.hidden = false;
+    gateInput.select();
+  } else {
+    gateError.textContent = 'Could not reach the study. Try again.';
+    gateError.hidden = false;
+  }
 });
 
 // ---------- send / stream ----------
@@ -97,7 +147,7 @@ async function streamAnswer() {
 
   let res;
   try {
-    res = await fetch('/.netlify/functions/chat', {
+    res = await fetch(FN, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -110,9 +160,9 @@ async function streamAnswer() {
     return;
   }
 
+  // Password stopped working mid-session (e.g. it was changed) — re-authenticate.
   if (res.status === 401) {
     bubble.closest('.msg').remove();
-    gateError.hidden = !password ? true : false; // show "wrong word" only after an attempt
     busy = false;
     sendBtn.disabled = false;
     showGate();
@@ -211,3 +261,9 @@ input.addEventListener('keydown', (e) => {
     form.requestSubmit();
   }
 });
+
+// ---------- startup ----------
+// Lock the composer until access is confirmed, then check access.
+input.disabled = true;
+sendBtn.disabled = true;
+init();
