@@ -19,6 +19,9 @@ const gateForm = document.getElementById('gate-form');
 const gateInput = document.getElementById('gate-input');
 const gateError = document.getElementById('gate-error');
 
+const feedbackBtn = document.getElementById('feedback');
+const toastEl = document.getElementById('toast');
+
 // ---------- DOM helpers ----------
 function el(tag, cls, text) {
   const n = document.createElement(tag);
@@ -260,6 +263,70 @@ input.addEventListener('keydown', (e) => {
     e.preventDefault();
     form.requestSubmit();
   }
+});
+
+// ---------- feedback ----------
+// The address is never a contiguous string in the HTML or JS source — it's
+// assembled from parts only when the button is clicked, so page-scraping spam
+// bots (which regex the served HTML for x@y.z) don't find it.
+let toastTimer;
+function toast(msg) {
+  toastEl.textContent = msg;
+  toastEl.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toastEl.hidden = true; }, 4500);
+}
+
+function transcriptText() {
+  if (!state.length) return '';
+  return state
+    .map((m) => (m.role === 'user' ? 'Visitor' : 'Democritus Junior') + ':\n' + m.content)
+    .join('\n\n');
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}
+
+feedbackBtn.addEventListener('click', async () => {
+  const p = ['elirarey', 'gmail', 'com'];
+  const addr = p[0] + '@' + p[1] + '.' + p[2];
+  const transcript = transcriptText();
+
+  const lines = ['My thoughts on Democritus Junior:', '', '', ''];
+  if (transcript) {
+    const copied = await copyText(transcript);
+    if (copied) {
+      lines.push('— My conversation is on my clipboard; paste it below this line —');
+      toast('Your conversation was copied — paste it into the email.');
+    } else {
+      lines.push('— My conversation —', '', transcript);
+      toast('Opening your email app…');
+    }
+  } else {
+    toast('Opening your email app…');
+  }
+
+  const subject = encodeURIComponent('Democritus Junior — feedback');
+  const body = encodeURIComponent(lines.join('\n'));
+  window.location.href = `mailto:${addr}?subject=${subject}&body=${body}`;
 });
 
 // ---------- startup ----------

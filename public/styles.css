@@ -219,6 +219,43 @@ body {
   line-height: 1.4;
 }
 
+/* ---------- feedback footer ---------- */
+.app-footer {
+  text-align: center;
+  padding: 22px 0 4px;
+  margin-top: 8px;
+  border-top: 1px solid var(--rule);
+}
+.feedback-btn {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 14.5px;
+  color: var(--ink-soft);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 3px;
+}
+.feedback-btn:hover { color: var(--accent); text-decoration: underline; }
+
+/* ---------- toast ---------- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: #f6efe0;
+  font-size: 14px;
+  padding: 10px 18px;
+  border-radius: 4px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+  z-index: 60;
+  max-width: 90vw;
+  text-align: center;
+}
+
 /* ---------- password gate ---------- */
 .gate {
   position: fixed;
