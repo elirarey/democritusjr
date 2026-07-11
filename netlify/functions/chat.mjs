@@ -32,11 +32,20 @@ export default async (req) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return json({ error: 'Server missing ANTHROPIC_API_KEY' }, 500);
 
+  // Read the raw body ourselves (more robust than req.json() across runtimes)
+  // and keep it around so we can report exactly what arrived if parsing/shape
+  // is wrong.
+  let rawBody = '';
+  try {
+    rawBody = await req.text();
+  } catch (e) {
+    rawBody = '';
+  }
   let payload;
   try {
-    payload = await req.json();
+    payload = JSON.parse(rawBody || '{}');
   } catch {
-    return json({ error: 'Invalid JSON' }, 400);
+    return json({ error: 'Invalid JSON', debug: { rawLen: rawBody.length, rawPreview: rawBody.slice(0, 200) } }, 400);
   }
 
   // Normalize + bound the conversation history the client sent.
@@ -53,7 +62,22 @@ export default async (req) => {
     .map((m) => ({ role: m.role, content: m.content.slice(0, MAX_CHARS) }));
 
   const lastUser = [...messages].reverse().find((m) => m.role === 'user');
-  if (!lastUser) return json({ error: 'No user message' }, 400);
+  if (!lastUser) {
+    return json(
+      {
+        error: 'No user message',
+        debug: {
+          rawLen: rawBody.length,
+          rawPreview: rawBody.slice(0, 200),
+          method: req.method,
+          contentType: req.headers.get('content-type'),
+          payloadKeys: payload && typeof payload === 'object' ? Object.keys(payload) : typeof payload,
+          messagesType: Array.isArray(payload?.messages) ? `array(${payload.messages.length})` : typeof payload?.messages,
+        },
+      },
+      400
+    );
+  }
 
   // ---- retrieve grounding for the latest question ----
   let method = 'keyword';
