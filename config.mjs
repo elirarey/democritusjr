@@ -5,9 +5,12 @@ export const config = {
   // ---- Generation (Anthropic) ----
   // Sonnet 5 is the spec's target. thinking is disabled for snappy, fully
   // streamed replies; Sonnet 5 rejects non-default sampling params, so we set
-  // none. maxTokens is capped to bound cost/abuse on a public endpoint.
+  // none. maxTokens bounds cost/abuse but must leave room for the digressive,
+  // wandering answers the persona prompt asks for — 1024 truncated them
+  // mid-WORD. 4096 (~3000 words) lets a committed digression reach a natural
+  // close; raise it if you still see cut-offs, lower it to rein in length/cost.
   genModel: 'claude-sonnet-5',
-  maxTokens: 1024,
+  maxTokens: 4096,
 
   // ---- Embeddings (local, no API key) ----
   // Runs in-process via transformers.js (ONNX/WASM). The corpus is embedded
