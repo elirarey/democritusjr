@@ -35,9 +35,10 @@ function ipKey(ip) {
     .slice(0, 32);
 }
 
-// Count questions per visitor in Netlify Blobs; return true exactly once, when
-// the visitor first crosses the feedback threshold. Fails open (never blocks a
-// reply) if Blobs is unavailable, e.g. running outside Netlify.
+// Count questions per visitor in Netlify Blobs; return true each time the
+// visitor reaches the feedback threshold, resetting the count so the nudge
+// recurs every `threshold` questions. Fails open (never blocks a reply) if
+// Blobs is unavailable, e.g. running outside Netlify.
 async function meterAndMaybePrompt(req) {
   const threshold = Number(process.env.FEEDBACK_PROMPT_AFTER) || config.meter.feedbackPromptAfter;
   try {
@@ -48,15 +49,15 @@ async function meterAndMaybePrompt(req) {
     // so the counter never accumulates across requests.
     const store = getStore({ name: 'usage-meter', consistency: 'strong' });
     const key = ipKey(ip);
-    const rec = (await store.get(key, { type: 'json' })) || { count: 0, prompted: false };
+    const rec = (await store.get(key, { type: 'json' })) || { count: 0 };
     rec.count += 1;
     let prompt = false;
-    if (!rec.prompted && rec.count >= threshold) {
-      rec.prompted = true;
+    if (rec.count >= threshold) {
       prompt = true;
+      rec.count = 0; // reset so the nudge recurs every `threshold` questions
     }
     await store.setJSON(key, rec);
-    return { prompt, count: rec.count, prompted: rec.prompted, threshold };
+    return { prompt, count: rec.count, threshold };
   } catch (err) {
     console.warn('[meter] skipped:', err?.message);
     return { prompt: false, count: 0, threshold, note: 'blobs-error: ' + (err?.message || '') };
