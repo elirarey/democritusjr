@@ -258,7 +258,10 @@ async function streamAnswer() {
     if (refs) bubble.closest('.msg').appendChild(refs);
     if (currentFeedbackPrompt && !feedbackInvited) {
       feedbackInvited = true;
-      bubble.closest('.msg').appendChild(renderFeedbackInvite());
+      const invite = renderFeedbackInvite();
+      bubble.closest('.msg').appendChild(invite);
+      invite.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      toast('The anatomist would welcome your feedback — see below.');
     }
   } else {
     bubble.textContent = 'He fell silent, and gave no answer.';
