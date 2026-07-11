@@ -230,6 +230,11 @@ body {
   padding: 20px;
   z-index: 50;
 }
+/* The `hidden` attribute must beat `.gate { display: flex }`, or setting
+   gate.hidden = true won't actually hide the overlay. */
+.gate[hidden] {
+  display: none;
+}
 .gate-card {
   background: var(--paper);
   border: 2px solid var(--ink);
