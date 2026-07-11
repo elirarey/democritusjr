@@ -34,24 +34,27 @@ function ipKey(ip) {
 // the visitor first crosses the feedback threshold. Fails open (never blocks a
 // reply) if Blobs is unavailable, e.g. running outside Netlify.
 async function meterAndMaybePrompt(req) {
+  const threshold = Number(process.env.FEEDBACK_PROMPT_AFTER) || config.meter.feedbackPromptAfter;
   try {
     const ip = clientIp(req);
-    if (!ip) return false;
+    if (!ip) return { prompt: false, count: 0, note: 'no-ip' };
     const { getStore } = await import('@netlify/blobs');
-    const store = getStore('usage-meter');
+    // Strong consistency: default (eventual) reads can miss a just-written value,
+    // so the counter never accumulates across requests.
+    const store = getStore({ name: 'usage-meter', consistency: 'strong' });
     const key = ipKey(ip);
     const rec = (await store.get(key, { type: 'json' })) || { count: 0, prompted: false };
     rec.count += 1;
     let prompt = false;
-    if (!rec.prompted && rec.count >= config.meter.feedbackPromptAfter) {
+    if (!rec.prompted && rec.count >= threshold) {
       rec.prompted = true;
       prompt = true;
     }
     await store.setJSON(key, rec);
-    return prompt;
+    return { prompt, count: rec.count };
   } catch (err) {
     console.warn('[meter] skipped:', err?.message);
-    return false;
+    return { prompt: false, count: 0, note: 'blobs-error: ' + (err?.message || '') };
   }
 }
 
@@ -176,13 +179,13 @@ export default async (req) => {
   }
 
   // Count this question per visitor; invite feedback once at the threshold.
-  const feedbackPrompt = await meterAndMaybePrompt(req);
+  const meter = await meterAndMaybePrompt(req);
 
   const body = new ReadableStream({
     async start(controller) {
       const enc = new TextEncoder();
       const send = (obj) => controller.enqueue(enc.encode(JSON.stringify(obj) + '\n'));
-      send({ type: 'sources', method, sources, feedbackPrompt });
+      send({ type: 'sources', method, sources, feedbackPrompt: meter.prompt, _meter: meter });
 
       try {
         const msgStream = client.messages.stream({
