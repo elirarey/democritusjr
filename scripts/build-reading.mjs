@@ -53,6 +53,10 @@ function anchorFromState(st) {
 }
 
 function buildBodyHtml(body) {
+  // Begin at Burton's own title page — drop the "Introduction to the Project
+  // Gutenberg Edition" and the frontispiece caption that precede it.
+  const titleIdx = body.search(/THE[^\S\r\n]*\r?\n\s*ANATOMY OF MELANCHOLY,/);
+  if (titleIdx !== -1) body = body.slice(titleIdx);
   const lines = body.split(/\r?\n/);
   const st = { partition: null, section: null, member: null, subsection: null, frontLabel: 'frontmatter' };
   const out = ['<h1 id="frontmatter" class="rd-title">The Anatomy of Melancholy</h1>'];
