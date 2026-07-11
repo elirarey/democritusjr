@@ -1,0 +1,18 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+  # No build step for the static site; the index is committed by `npm run ingest`.
+  command = "echo 'static site — nothing to build'"
+
+[functions]
+  node_bundler = "esbuild"
+  # Keep the native/WASM embedding stack out of the esbuild bundle, and make
+  # sure the precomputed index + config/lib modules ship with the function.
+  external_node_modules = ["@xenova/transformers", "onnxruntime-node", "sharp"]
+  included_files = ["data/index.json", "config.mjs", "lib/**"]
+
+# Pretty URL for the frontend.
+[[redirects]]
+  from = "/api/chat"
+  to = "/.netlify/functions/chat"
+  status = 200

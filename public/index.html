@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Democritus Junior — an anatomy of your questions</title>
+    <meta
+      name="description"
+      content="Converse with Democritus Junior, Robert Burton's melancholy anatomist, grounded in The Anatomy of Melancholy (1621)."
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%9C%81%3C/text%3E%3C/svg%3E"
+    />
+  </head>
+  <body>
+    <div class="app">
+      <header class="masthead">
+        <div class="masthead-inner">
+          <h1>Democritus Junior</h1>
+          <p class="sub">
+            The melancholy anatomist, grounded in <em>The Anatomy of Melancholy</em> (1621).
+            Ask, and be answered in his own voice — with his authorities cited.
+          </p>
+        </div>
+      </header>
+
+      <main class="stage">
+        <section class="chat" aria-label="Conversation">
+          <div id="messages" class="messages">
+            <div class="msg assistant">
+              <div class="who">Democritus Junior</div>
+              <div class="bubble">
+                Welcome, gentle reader. I have anatomized melancholy in all its
+                causes, symptoms, and cures. Put to me your question — of love, of
+                fear, of study, of the spleen — and I shall answer as I may, and
+                cite my authorities.
+              </div>
+            </div>
+          </div>
+
+          <form id="composer" class="composer" autocomplete="off">
+            <textarea
+              id="input"
+              rows="1"
+              placeholder="What is the cause of melancholy?"
+              aria-label="Your question"
+            ></textarea>
+            <button id="send" type="submit" aria-label="Send">Ask</button>
+          </form>
+        </section>
+
+        <aside class="grounding" aria-label="Grounding passages">
+          <h2>Grounding</h2>
+          <p class="grounding-note" id="grounding-note">
+            The passages the anatomist drew upon for his last answer will appear
+            here, with their book, section, member, and subsection.
+          </p>
+          <ul id="sources" class="sources"></ul>
+        </aside>
+      </main>
+    </div>
+
+    <!-- Password gate -->
+    <div id="gate" class="gate" hidden>
+      <form id="gate-form" class="gate-card">
+        <h2>A word at the door</h2>
+        <p>This study is kept behind a password. Speak it, friend.</p>
+        <input
+          id="gate-input"
+          type="password"
+          placeholder="Password"
+          aria-label="Password"
+        />
+        <p id="gate-error" class="gate-error" hidden>That is not the word.</p>
+        <button type="submit">Enter</button>
+      </form>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
