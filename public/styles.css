@@ -63,14 +63,10 @@ body {
 
 /* ---------- layout ---------- */
 .stage {
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 26px;
+  display: flex;
+  justify-content: center;
   flex: 1;
   min-height: 0;
-}
-@media (max-width: 820px) {
-  .stage { grid-template-columns: 1fr; }
 }
 
 /* ---------- chat ---------- */
@@ -78,6 +74,8 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 60vh;
+  width: 100%;
+  max-width: 760px; /* comfortable single-column reading measure */
 }
 .messages {
   flex: 1;
@@ -120,6 +118,37 @@ body {
   animation: blink 1s steps(2, start) infinite;
 }
 @keyframes blink { to { opacity: 0; } }
+
+/* ---------- reference list (appended under an answer) ---------- */
+.references {
+  margin: 9px 2px 0;
+  padding-top: 8px;
+  border-top: 1px dotted var(--rule);
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.references-label {
+  font-variant: small-caps;
+  letter-spacing: 0.05em;
+  font-size: 11.5px;
+  margin-bottom: 4px;
+}
+.references ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.references li {
+  margin: 2px 0;
+  line-height: 1.35;
+}
+.references .ref {
+  color: var(--accent);
+  font-style: italic;
+}
+.references .title {
+  color: var(--ink-soft);
+}
 
 /* ---------- composer ---------- */
 .composer {
@@ -202,6 +231,15 @@ body {
   padding: 10px 12px;
   margin-bottom: 10px;
 }
+.sources li.kind-digression { border-left: 3px solid var(--gold); }
+.sources .kind-label {
+  font-variant: small-caps;
+  letter-spacing: 0.06em;
+  font-size: 10.5px;
+  color: var(--ink-soft);
+  margin-bottom: 3px;
+}
+.sources li.kind-digression .kind-label { color: var(--gold); }
 .sources .ref {
   color: var(--accent);
   font-size: 13px;
@@ -308,3 +346,85 @@ body {
   cursor: pointer;
 }
 .gate-error { color: var(--accent) !important; font-style: normal !important; margin-top: -6px !important; }
+
+/* ---------- reference links (into the reading page) ---------- */
+.references a.ref { text-decoration: none; }
+.references a.ref:hover { text-decoration: underline; }
+
+/* ---------- reading page (read.html) ---------- */
+.rd-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: rgba(244, 239, 227, 0.95);
+  backdrop-filter: blur(4px);
+  border-bottom: 1px solid var(--ink);
+  padding: 10px 18px;
+}
+.rd-back {
+  color: var(--accent);
+  text-decoration: none;
+  font-variant: small-caps;
+  letter-spacing: 0.04em;
+}
+.rd-back:hover { text-decoration: underline; }
+.rd-nav a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  margin-left: 14px;
+  font-variant: small-caps;
+  font-size: 14px;
+}
+.rd-nav a:hover { color: var(--accent); }
+.rd-book {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 20px 90px;
+}
+.rd-title {
+  text-align: center;
+  font-variant: small-caps;
+  letter-spacing: 0.05em;
+  margin: 10px 0 30px;
+}
+.rd-h { scroll-margin-top: 64px; } /* keep the sticky bar from covering targets */
+.rd-part {
+  text-align: center;
+  font-variant: small-caps;
+  letter-spacing: 0.06em;
+  margin: 52px 0 20px;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 8px;
+}
+.rd-sect,
+.rd-memb {
+  margin: 34px 0 12px;
+  font-size: 18px;
+  font-variant: small-caps;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+}
+.rd-subs {
+  margin: 26px 0 10px;
+  font-size: 16px;
+  font-style: italic;
+}
+.rd-preface {
+  text-align: center;
+  font-variant: small-caps;
+  margin: 40px 0 20px;
+}
+.rd-book p {
+  margin: 0 0 14px;
+  text-align: justify;
+  hyphens: auto;
+}
+.rd-h:target {
+  background: #f6e6c8;
+  box-shadow: 0 0 0 6px #f6e6c8;
+  border-radius: 2px;
+}

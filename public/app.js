@@ -1,6 +1,6 @@
 // Client for the Democritus Junior chatbot. Keeps conversation state, streams
-// NDJSON from /api/chat, renders the answer + grounding sidebar, and handles the
-// shared-password gate.
+// NDJSON from the function, renders the answer with a reference list beneath it,
+// and handles the shared-password gate.
 
 const FN = '/.netlify/functions/chat';
 const state = []; // [{ role: 'user'|'assistant', content: string }]
@@ -11,8 +11,7 @@ const messagesEl = document.getElementById('messages');
 const form = document.getElementById('composer');
 const input = document.getElementById('input');
 const sendBtn = document.getElementById('send');
-const sourcesEl = document.getElementById('sources');
-const groundingNote = document.getElementById('grounding-note');
+let currentSources = []; // passages behind the latest answer (for its reference list)
 
 const gate = document.getElementById('gate');
 const gateForm = document.getElementById('gate-form');
@@ -58,22 +57,60 @@ function highlightCitations(text) {
   return frag;
 }
 
-function renderSources(method, sources) {
-  sourcesEl.innerHTML = '';
-  groundingNote.hidden = true;
-  const tag = el('span', 'method-tag', method === 'semantic' ? 'semantic search' : 'keyword search');
-  sourcesEl.appendChild(tag);
-  if (!sources.length) {
-    sourcesEl.appendChild(el('p', 'grounding-note', 'No passages were retrieved for this question.'));
-    return;
-  }
+// Map a section_ref string to an anchor id on /read.html.
+// KEEP IN SYNC with anchorFromState in scripts/build-reading.mjs.
+function refToAnchor(ref) {
+  if (!ref) return '';
+  if (/reader/i.test(ref)) return 'preface';
+  if (/front matter/i.test(ref)) return 'frontmatter';
+  const grab = (re) => {
+    const m = ref.match(re);
+    return m ? m[1] : null;
+  };
+  const p = grab(/Part\.\s*(\d+)/i);
+  const s = grab(/Sect\.\s*(\d+)/i);
+  const m = grab(/Memb\.\s*(\d+)/i);
+  const u = grab(/Subs\.\s*(\d+)/i);
+  const a = [];
+  if (p) a.push('p' + p);
+  if (s) a.push('s' + s);
+  if (m) a.push('m' + m);
+  if (u) a.push('u' + u);
+  return a.join('-');
+}
+
+// Build the reference list appended under a finished answer: just the section
+// references (and their titles) that grounded it — no quoted text. Each ref
+// links into the full-text reading page at the matching section.
+function renderReferences(sources) {
+  if (!sources || !sources.length) return null;
+  const seen = new Set();
+  const wrap = el('div', 'references');
+  wrap.appendChild(el('div', 'references-label', 'Whence this was drawn'));
+  const ul = document.createElement('ul');
   for (const s of sources) {
-    const li = el('li');
-    li.appendChild(el('div', 'ref', `[${s.section_ref}]`));
-    if (s.title) li.appendChild(el('div', 'title', s.title));
-    li.appendChild(el('div', 'snippet', s.snippet));
-    sourcesEl.appendChild(li);
+    const key = s.section_ref + '|' + (s.title || '');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const li = document.createElement('li');
+    const anchor = refToAnchor(s.section_ref);
+    if (anchor) {
+      const a = el('a', 'ref', s.section_ref);
+      a.href = '/read.html#' + anchor;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      li.appendChild(a);
+    } else {
+      li.appendChild(el('span', 'ref', s.section_ref));
+    }
+    if (s.title) {
+      li.appendChild(document.createTextNode(' — '));
+      li.appendChild(el('span', 'title', s.title));
+    }
+    ul.appendChild(li);
   }
+  wrap.appendChild(ul);
+  return wrap;
 }
 
 // ---------- authentication gate ----------
@@ -143,6 +180,7 @@ gateForm.addEventListener('submit', async (e) => {
 async function streamAnswer() {
   busy = true;
   sendBtn.disabled = true;
+  currentSources = [];
 
   const bubble = addMessage('assistant', 'Democritus Junior', '');
   bubble.classList.add('thinking');
@@ -214,6 +252,8 @@ async function streamAnswer() {
     bubble.textContent = '';
     bubble.appendChild(highlightCitations(answer));
     state.push({ role: 'assistant', content: answer });
+    const refs = renderReferences(currentSources);
+    if (refs) bubble.closest('.msg').appendChild(refs);
   } else {
     bubble.textContent = 'He fell silent, and gave no answer.';
   }
@@ -224,7 +264,7 @@ async function streamAnswer() {
 
 function handleEvent(evt, bubble, cursor, append) {
   if (evt.type === 'sources') {
-    renderSources(evt.method, evt.sources || []);
+    currentSources = evt.sources || [];
   } else if (evt.type === 'delta') {
     append(evt.text);
     cursor.insertAdjacentText('beforebegin', evt.text);

@@ -7,8 +7,29 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { config } from '../../config.mjs';
-import { retrieve } from '../../lib/retriever.mjs';
-import { buildSystem, renderContext } from '../../lib/persona.mjs';
+import { retrieve, digress } from '../../lib/retriever.mjs';
+import { buildSystem, renderContext, buildDigressionSystem } from '../../lib/persona.mjs';
+
+const snip = (t) => t.slice(0, 240).replace(/\s+/g, ' ').trim() + '…';
+
+// Optional pivot hook: a cheap model names one secondary subject/person/
+// authority in the primary passage, used as the digression query. Falls back to
+// the passage text on any failure. (No `thinking` param — kept model-agnostic.)
+async function pivotPhrase(client, text) {
+  const msg = await client.messages.create({
+    model: config.digression.pivotModel,
+    max_tokens: 24,
+    system:
+      'You name ONE secondary subject, person, or authority mentioned in the passage — something adjacent to its main point that would make a good digression. Reply with only that short phrase, nothing else.',
+    messages: [{ role: 'user', content: text.slice(0, 2000) }],
+  });
+  const out = (msg.content || [])
+    .filter((b) => b.type === 'text')
+    .map((b) => b.text)
+    .join(' ')
+    .trim();
+  return out || text;
+}
 
 const MAX_HISTORY = 12; // cap turns sent to the model (cost/abuse)
 const MAX_CHARS = 4000; // cap per-message length
@@ -60,7 +81,9 @@ export default async (req) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return json({ error: 'Server missing ANTHROPIC_API_KEY' }, 500);
 
-  // ---- retrieve grounding for the latest question ----
+  const client = new Anthropic({ apiKey });
+
+  // ---- primary retrieval (unchanged): semantic search on the question ----
   let method = 'keyword';
   let results = [];
   try {
@@ -69,14 +92,45 @@ export default async (req) => {
     return json({ error: `Index unavailable: ${err.message}` }, 500);
   }
 
-  const system = buildSystem(renderContext(results));
-  const sources = results.map((r) => ({
-    section_ref: r.section_ref,
-    title: r.title,
-    snippet: r.text.slice(0, 240).replace(/\s+/g, ' ') + '…',
-  }));
+  // ---- digression stage: build the system prompt + grounding sources ----
+  const primary = results[0] || null;
+  let system;
+  let sources;
 
-  const client = new Anthropic({ apiKey });
+  if (config.digression.enabled && primary) {
+    // Second search seeded by P's own text (or a pivot phrase from it).
+    let queryText = primary.text;
+    if (config.digression.pivotHook) {
+      queryText = await pivotPhrase(client, primary.text).catch(() => primary.text);
+    }
+
+    let passages = [];
+    try {
+      ({ passages } = await digress(primary, { queryText, hops: config.digression.hops }));
+    } catch (err) {
+      console.warn('[chat] digression failed:', err?.message);
+    }
+
+    system = buildDigressionSystem(primary.text, passages.map((p) => p.text).join('\n\n'));
+    sources = [
+      { kind: 'primary', section_ref: primary.section_ref, title: primary.title, snippet: snip(primary.text) },
+      ...passages.map((p) => ({
+        kind: 'digression',
+        section_ref: p.section_ref,
+        title: p.title,
+        snippet: snip(p.text),
+      })),
+    ];
+  } else {
+    // Digression off (or nothing retrieved): original grounded-answer path.
+    system = buildSystem(renderContext(results));
+    sources = results.map((r) => ({
+      kind: 'primary',
+      section_ref: r.section_ref,
+      title: r.title,
+      snippet: snip(r.text),
+    }));
+  }
 
   const body = new ReadableStream({
     async start(controller) {

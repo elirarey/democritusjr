@@ -6,3 +6,6 @@ node_modules/
 .cache/
 /tmp/
 *.log
+
+# netlify dev edge-runtime byproduct
+deno.lock

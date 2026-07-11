@@ -18,6 +18,47 @@ export const config = {
   // ---- Retrieval ----
   topK: 6,
 
+  // ---- Digression stage (second retrieval) ----
+  // A second semantic search whose QUERY is the text of the primary passage P
+  // (not the user's question), used to surface a connected-but-tangential
+  // passage the answer can wander into. The primary search above is untouched.
+  digression: {
+    enabled: true,
+
+    // How the tangent is chosen from the candidates ranked by similarity to P:
+    //   'band' — pick a passage from a mid rank band (skips the near-duplicates
+    //            at ranks 1-3); robust because query == P, so "nearest" is just
+    //            "most redundant". Varies per reply (random within the band).
+    //   'mmr'  — Maximal Marginal Relevance. NOTE: because the query IS P, the
+    //            relevance term and the diversity-from-P term reference the same
+    //            signal, so a low lambda (favoring diversity) is what actually
+    //            produces a tangent; lambda≈0.5 degenerates toward the nearest
+    //            neighbor. See lib/retriever.mjs for the math.
+    method: 'band',
+
+    // Rank band (1-indexed) to draw the tangent from, for method 'band'.
+    bandMin: 4,
+    bandMax: 12,
+
+    // MMR knobs, for method 'mmr'.
+    mmrLambda: 0.35, // <0.5 favors tangents given query == P
+    mmrPoolSize: 40, // consider this many top-relevant candidates
+
+    // Exclude P and its neighbours so the tangent jumps elsewhere in the text:
+    // any chunk within this many chunk_index of P, or sharing P's section_ref.
+    adjacentWindow: 1,
+    excludeSameSection: true,
+
+    // P -> D -> E ... chaining. Default 1 = a single digression D.
+    hops: 1,
+
+    // Optional pivot hook (default off): before the digression search, have a
+    // cheap model name one secondary subject/person/authority in P and use that
+    // phrase as the digression query instead of P's full text.
+    pivotHook: false,
+    pivotModel: 'claude-haiku-4-5',
+  },
+
   // ---- Chunking (ingest) ----
   // ~500-800 token passages with ~15% overlap. We approximate tokens as
   // words * 1.3, so target word counts below land in that token band.
