@@ -86,7 +86,6 @@ function renderReferences(sources) {
   if (!sources || !sources.length) return null;
   const seen = new Set();
   const wrap = el('div', 'references');
-  wrap.appendChild(el('div', 'references-label', 'Whence this was drawn'));
   const ul = document.createElement('ul');
   for (const s of sources) {
     const key = s.section_ref + '|' + (s.title || '');
