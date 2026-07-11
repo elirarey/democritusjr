@@ -440,8 +440,7 @@ body.reading {
   hyphens: auto;
 }
 .rd-h:target {
-  background: #f6e6c8;
-  box-shadow: 0 0 0 6px #f6e6c8;
+  background: rgba(214, 178, 92, 0.28);
   border-radius: 2px;
 }
 
@@ -482,6 +481,5 @@ sup.fn a:hover { text-decoration: underline; }
   margin-left: 4px;
 }
 .rd-note:target,
-.rd-h:target + * ,
-p[id^="fn"]:target { background: #f6e6c8; }
-sup.fn a:target { background: #f6e6c8; border-radius: 2px; }
+p[id^="fn"]:target { background: rgba(214, 178, 92, 0.28); border-radius: 2px; }
+sup.fn a:target { background: rgba(214, 178, 92, 0.45); border-radius: 2px; }
