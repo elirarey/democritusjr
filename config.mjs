@@ -18,6 +18,16 @@ export const config = {
   embedModel: 'Xenova/all-MiniLM-L6-v2',
   embedDim: 384,
 
+  // ---- Per-IP metering ----
+  // Counts questions per visitor (hashed IP) in Netlify Blobs. Used here to
+  // invite feedback once someone has asked a lot; the same counter could later
+  // enforce a hard rate cap.
+  meter: {
+    // Invite feedback once a visitor hits this many questions. Override via the
+    // FEEDBACK_PROMPT_AFTER env var without a code change.
+    feedbackPromptAfter: Number(process.env.FEEDBACK_PROMPT_AFTER) || 15,
+  },
+
   // ---- Retrieval ----
   topK: 6,
 

@@ -483,3 +483,25 @@ sup.fn a:hover { text-decoration: underline; }
 .rd-note:target,
 p[id^="fn"]:target { background: rgba(214, 178, 92, 0.28); border-radius: 2px; }
 sup.fn a:target { background: rgba(214, 178, 92, 0.45); border-radius: 2px; }
+
+/* ---------- feedback invitation (shown after heavy use) ---------- */
+.feedback-invite {
+  margin: 9px 2px 0;
+  padding-top: 8px;
+  border-top: 1px dotted var(--rule);
+  font-size: 14px;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+.feedback-invite-link {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--accent);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.feedback-invite-link:hover { color: var(--accent-soft); }

@@ -5,12 +5,55 @@
 //   {"type":"delta","text":…} repeatedly, as the answer streams
 //   {"type":"done"}           at the end   |   {"type":"error","message":…}
 
+import { createHash } from 'node:crypto';
 import Anthropic from '@anthropic-ai/sdk';
 import { config } from '../../config.mjs';
 import { retrieve, digress } from '../../lib/retriever.mjs';
 import { buildSystem, renderContext, buildDigressionSystem } from '../../lib/persona.mjs';
 
 const snip = (t) => t.slice(0, 240).replace(/\s+/g, ' ').trim() + '…';
+
+// The visitor's IP, from Netlify's header (falls back to x-forwarded-for).
+function clientIp(req) {
+  return (
+    req.headers.get('x-nf-client-connection-ip') ||
+    (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() ||
+    ''
+  );
+}
+
+// Store an opaque hash of the IP, never the IP itself.
+function ipKey(ip) {
+  return createHash('sha256')
+    .update((process.env.METER_SALT || 'anatomy-of-melancholy') + ip)
+    .digest('hex')
+    .slice(0, 32);
+}
+
+// Count questions per visitor in Netlify Blobs; return true exactly once, when
+// the visitor first crosses the feedback threshold. Fails open (never blocks a
+// reply) if Blobs is unavailable, e.g. running outside Netlify.
+async function meterAndMaybePrompt(req) {
+  try {
+    const ip = clientIp(req);
+    if (!ip) return false;
+    const { getStore } = await import('@netlify/blobs');
+    const store = getStore('usage-meter');
+    const key = ipKey(ip);
+    const rec = (await store.get(key, { type: 'json' })) || { count: 0, prompted: false };
+    rec.count += 1;
+    let prompt = false;
+    if (!rec.prompted && rec.count >= config.meter.feedbackPromptAfter) {
+      rec.prompted = true;
+      prompt = true;
+    }
+    await store.setJSON(key, rec);
+    return prompt;
+  } catch (err) {
+    console.warn('[meter] skipped:', err?.message);
+    return false;
+  }
+}
 
 // Optional pivot hook: a cheap model names one secondary subject/person/
 // authority in the primary passage, used as the digression query. Falls back to
@@ -132,11 +175,14 @@ export default async (req) => {
     }));
   }
 
+  // Count this question per visitor; invite feedback once at the threshold.
+  const feedbackPrompt = await meterAndMaybePrompt(req);
+
   const body = new ReadableStream({
     async start(controller) {
       const enc = new TextEncoder();
       const send = (obj) => controller.enqueue(enc.encode(JSON.stringify(obj) + '\n'));
-      send({ type: 'sources', method, sources });
+      send({ type: 'sources', method, sources, feedbackPrompt });
 
       try {
         const msgStream = client.messages.stream({
