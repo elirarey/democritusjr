@@ -31,6 +31,15 @@ function esc(s) {
     .replace(/>/g, '&gt;');
 }
 
+// Project Gutenberg marks italics with _underscores_. Turn balanced pairs into
+// real <em>, then drop any orphan underscore (an italic marker whose partner
+// fell on another line) so none show up literally in headings or text.
+function inline(s) {
+  return esc(s)
+    .replace(/_([^_\n]+)_/g, '<em>$1</em>')
+    .replace(/_/g, '');
+}
+
 function anchorFromState(st) {
   if (!st.partition && !st.section) {
     return st.frontLabel === 'preface' ? 'preface' : 'frontmatter';
@@ -52,7 +61,7 @@ function buildBodyHtml(body) {
 
   const flush = () => {
     if (para.length) {
-      out.push('<p>' + esc(para.join(' ')) + '</p>');
+      out.push('<p>' + inline(para.join(' ')) + '</p>');
       para = [];
     }
   };
@@ -74,7 +83,7 @@ function buildBodyHtml(body) {
       flush();
       Object.assign(st, { partition: null, section: null, member: null, subsection: null });
       st.frontLabel = 'preface';
-      out.push(`<h2 id="preface" class="rd-h rd-preface">${esc(line)}</h2>`);
+      out.push(`<h2 id="preface" class="rd-h rd-preface">${inline(line)}</h2>`);
       continue;
     }
 
@@ -86,7 +95,7 @@ function buildBodyHtml(body) {
       st.member = null;
       st.subsection = null;
       skip = false;
-      out.push(`<h2 id="${anchorFromState(st)}" class="rd-h rd-part">${esc(line)}</h2>`);
+      out.push(`<h2 id="${anchorFromState(st)}" class="rd-h rd-part">${inline(line)}</h2>`);
       continue;
     }
 
@@ -99,7 +108,7 @@ function buildBodyHtml(body) {
       const m = line.match(markers.member);
       st.member = m ? roman(m[1]) : 1;
       st.subsection = null;
-      out.push(`<h3 id="${anchorFromState(st)}" class="rd-h rd-sect">${esc(line)}</h3>`);
+      out.push(`<h3 id="${anchorFromState(st)}" class="rd-h rd-sect">${inline(line)}</h3>`);
       continue;
     }
     if (/^MEMB\./i.test(line)) {
@@ -107,14 +116,14 @@ function buildBodyHtml(body) {
       const m = line.match(markers.member);
       if (m) st.member = roman(m[1]);
       st.subsection = null;
-      out.push(`<h3 id="${anchorFromState(st)}" class="rd-h rd-memb">${esc(line)}</h3>`);
+      out.push(`<h3 id="${anchorFromState(st)}" class="rd-h rd-memb">${inline(line)}</h3>`);
       continue;
     }
     const mSub = line.match(markers.subsection);
     if (mSub) {
       flush();
       st.subsection = roman(mSub[1]);
-      out.push(`<h4 id="${anchorFromState(st)}" class="rd-h rd-subs">${esc(line)}</h4>`);
+      out.push(`<h4 id="${anchorFromState(st)}" class="rd-h rd-subs">${inline(line)}</h4>`);
       continue;
     }
 
