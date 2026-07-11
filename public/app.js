@@ -97,7 +97,7 @@ async function streamAnswer() {
 
   let res;
   try {
-    res = await fetch('/api/chat', {
+    res = await fetch('/.netlify/functions/chat', {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
