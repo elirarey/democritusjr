@@ -192,7 +192,7 @@ export default async (req) => {
     async start(controller) {
       const enc = new TextEncoder();
       const send = (obj) => controller.enqueue(enc.encode(JSON.stringify(obj) + '\n'));
-      send({ type: 'sources', method, sources, _meter: meter });
+      send({ type: 'sources', method, sources });
 
       try {
         const msgStream = client.messages.stream({
