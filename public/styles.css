@@ -444,3 +444,44 @@ body.reading {
   box-shadow: 0 0 0 6px #f6e6c8;
   border-radius: 2px;
 }
+
+/* ---------- footnote markers + endnotes (read.html) ---------- */
+sup.fn {
+  line-height: 0;
+  font-size: 0.72em;
+}
+sup.fn a {
+  color: var(--accent);
+  text-decoration: none;
+  padding: 0 1px;
+}
+sup.fn a:hover { text-decoration: underline; }
+
+.rd-notes {
+  margin-top: 40px;
+  border-top: 2px solid var(--ink);
+  padding-top: 8px;
+}
+.rd-note {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  margin: 0 0 8px;
+  padding-left: 2.2em;
+  text-indent: -2.2em; /* hanging indent */
+}
+.rd-note-num {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+.rd-note-num:hover { text-decoration: underline; }
+.rd-note-back {
+  color: var(--accent);
+  text-decoration: none;
+  margin-left: 4px;
+}
+.rd-note:target,
+.rd-h:target + * ,
+p[id^="fn"]:target { background: #f6e6c8; }
+sup.fn a:target { background: #f6e6c8; border-radius: 2px; }

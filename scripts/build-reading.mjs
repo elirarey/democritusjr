@@ -1,7 +1,7 @@
 // Build public/read.html — the full text of The Anatomy of Melancholy as a
-// single readable page, with an anchor id on every heading so the chat's
-// reference list can deep-link into it. Mirrors the structural walk in
-// lib/textPrep.mjs, but preserves headings/paragraphs instead of flattening.
+// single readable page, with an anchor id on every heading (so the chat's
+// reference list can deep-link into it) and the book's footnotes rendered as
+// endnotes at the bottom, linked both ways.
 //
 // Anchor scheme (keep in sync with refToAnchor in public/app.js):
 //   partition p{P}, section s{S}, member m{M}, subsection u{U}
@@ -10,7 +10,9 @@
 
 import fs from 'node:fs';
 import { config, markers, partitionOrdinal } from '../config.mjs';
-import { stripGutenberg } from '../lib/textPrep.mjs';
+
+const footnotes = JSON.parse(fs.readFileSync('data/footnotes.json', 'utf8'));
+const usedNotes = new Set();
 
 const ROMAN = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
 function roman(s) {
@@ -31,13 +33,18 @@ function esc(s) {
     .replace(/>/g, '&gt;');
 }
 
-// Project Gutenberg marks italics with _underscores_. Turn balanced pairs into
-// real <em>, then drop any orphan underscore (an italic marker whose partner
-// fell on another line) so none show up literally in headings or text.
+// Render body text to HTML: escape, turn [NNNN] footnote markers into
+// superscript links to their endnote, turn _italics_ into <em>, and drop any
+// orphan underscore.
 function inline(s) {
-  return esc(s)
-    .replace(/_([^_\n]+)_/g, '<em>$1</em>')
-    .replace(/_/g, '');
+  let t = esc(s);
+  t = t.replace(/\[(\d+)\]/g, (m, n) => {
+    if (!footnotes[n]) return m;
+    usedNotes.add(n);
+    return `<sup class="fn"><a id="ref${n}" href="#fn${n}">${n}</a></sup>`;
+  });
+  t = t.replace(/_([^_\n]+)_/g, '<em>$1</em>').replace(/_/g, '');
+  return t;
 }
 
 function anchorFromState(st) {
@@ -53,10 +60,9 @@ function anchorFromState(st) {
 }
 
 function buildBodyHtml(body) {
-  // Begin at Burton's own title page — drop the "Introduction to the Project
-  // Gutenberg Edition" and the frontispiece caption that precede it.
+  // Begin at Burton's own title page (defensive — the source already starts there).
   const titleIdx = body.search(/THE[^\S\r\n]*\r?\n\s*ANATOMY OF MELANCHOLY,/);
-  if (titleIdx !== -1) body = body.slice(titleIdx);
+  if (titleIdx > 0) body = body.slice(titleIdx);
   const lines = body.split(/\r?\n/);
   const st = { partition: null, section: null, member: null, subsection: null, frontLabel: 'frontmatter' };
   const out = ['<h1 id="frontmatter" class="rd-title">The Anatomy of Melancholy</h1>'];
@@ -137,7 +143,21 @@ function buildBodyHtml(body) {
   return out.join('\n');
 }
 
-const PAGE = (bodyHtml) => `<!DOCTYPE html>
+// Endnotes: every footnote referenced in the text, numerically ordered, each
+// linking back to its marker.
+function renderNotes(used) {
+  if (!used.size) return '';
+  const nums = [...used].map(Number).sort((a, b) => a - b);
+  const items = nums
+    .map(
+      (n) =>
+        `<p id="fn${n}" class="rd-note"><a class="rd-note-num" href="#ref${n}">${n}.</a> ${footnotes[n]} <a class="rd-note-back" href="#ref${n}" aria-label="back to text">↩</a></p>`
+    )
+    .join('\n');
+  return `<section class="rd-notes">\n<h2 id="notes" class="rd-h rd-part">Notes</h2>\n${items}\n</section>`;
+}
+
+const PAGE = (bodyHtml, notesHtml) => `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -154,20 +174,25 @@ const PAGE = (bodyHtml) => `<!DOCTYPE html>
         <a href="#p1">Part I</a>
         <a href="#p2">Part II</a>
         <a href="#p3">Part III</a>
+        <a href="#notes">Notes</a>
       </nav>
     </header>
     <main class="rd-book">
 ${bodyHtml}
+${notesHtml}
     </main>
   </body>
 </html>
 `;
 
 const raw = fs.readFileSync(config.sourcePath, 'utf8');
-const body = stripGutenberg(raw);
-const html = PAGE(buildBodyHtml(body));
+const bodyHtml = buildBodyHtml(raw);
+const notesHtml = renderNotes(usedNotes);
+const html = PAGE(bodyHtml, notesHtml);
 fs.writeFileSync('public/read.html', html);
 
 const headings = (html.match(/class="rd-h/g) || []).length;
 const sizeMB = (Buffer.byteLength(html) / 1e6).toFixed(1);
-console.log(`Wrote public/read.html — ${headings} headings, ${sizeMB} MB.`);
+console.log(
+  `Wrote public/read.html — ${headings} headings, ${usedNotes.size} endnotes, ${sizeMB} MB.`
+);

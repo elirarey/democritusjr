@@ -31,14 +31,15 @@ Melancholy* (1621) via retrieval-augmented generation.
 ```
 config.mjs                 model, chunking, top_k, marker regexes, persona name
 lib/
-  textPrep.mjs             strip Gutenberg wrapper, parse markers, chunk
+  textPrep.mjs             parse structural markers, chunk
   embedder.mjs             transformers.js embedding interface (swappable)
   retriever.mjs            semantic search + BM25 fallback over the index
   persona.mjs              system-prompt assembly + context rendering
 scripts/ingest.mjs         one-off: build data/index.json from data/source.txt
 netlify/functions/chat.mjs the server-side proxy (password gate + stream)
 public/                    index.html, styles.css, app.js  (the static site)
-data/source.txt            the source text (Project Gutenberg #10800)
+data/source.txt            the source text (public domain)
+data/footnotes.json        the book's footnotes, keyed by number (for read.html)
 data/index.json            precomputed chunks + embeddings (created by ingest)
 netlify.toml               Netlify build/function config
 ```
@@ -115,5 +116,6 @@ chunk sizes, and the `markers` regexes for parsing structural references.
 
 ## Source text
 
-*The Anatomy of Melancholy* by Robert Burton — Project Gutenberg eBook
-[#10800](https://www.gutenberg.org/ebooks/10800), public domain.
+*The Anatomy of Melancholy* by Robert Burton (1621) — in the **public domain**.
+The text and footnotes are sourced from a public-domain digital edition; all
+distributed copies here are the underlying public-domain work only.

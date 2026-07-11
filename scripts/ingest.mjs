@@ -1,17 +1,16 @@
-// One-off ingest: read the source text, strip the Gutenberg wrapper, chunk with
-// structural markers, embed every chunk locally, and write data/index.json.
-// Idempotent — re-running rebuilds the index cleanly.
+// One-off ingest: read the source text, chunk with structural markers, embed
+// every chunk locally, and write data/index.json. Idempotent — re-running
+// rebuilds the index cleanly.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { config } from '../config.mjs';
-import { stripGutenberg, chunk } from '../lib/textPrep.mjs';
+import { chunk } from '../lib/textPrep.mjs';
 import { embed } from '../lib/embedder.mjs';
 
 const t0 = Date.now();
 
-const raw = fs.readFileSync(config.sourcePath, 'utf8');
-const body = stripGutenberg(raw);
+const body = fs.readFileSync(config.sourcePath, 'utf8');
 
 const chunks = chunk(body, {
   targetWords: config.chunkTargetWords,
