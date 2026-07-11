@@ -12,8 +12,6 @@ const form = document.getElementById('composer');
 const input = document.getElementById('input');
 const sendBtn = document.getElementById('send');
 let currentSources = []; // passages behind the latest answer (for its reference list)
-let currentFeedbackPrompt = false; // server asked us to invite feedback this turn
-let feedbackInvited = false; // only show the invitation once per session
 
 const gate = document.getElementById('gate');
 const gateForm = document.getElementById('gate-form');
@@ -182,7 +180,6 @@ async function streamAnswer() {
   busy = true;
   sendBtn.disabled = true;
   currentSources = [];
-  currentFeedbackPrompt = false;
 
   const bubble = addMessage('assistant', 'Democritus Junior', '');
   bubble.classList.add('thinking');
@@ -256,13 +253,6 @@ async function streamAnswer() {
     state.push({ role: 'assistant', content: answer });
     const refs = renderReferences(currentSources);
     if (refs) bubble.closest('.msg').appendChild(refs);
-    if (currentFeedbackPrompt && !feedbackInvited) {
-      feedbackInvited = true;
-      const invite = renderFeedbackInvite();
-      bubble.closest('.msg').appendChild(invite);
-      invite.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      toast('The anatomist would welcome your feedback — see below.');
-    }
   } else {
     bubble.textContent = 'He fell silent, and gave no answer.';
   }
@@ -274,7 +264,6 @@ async function streamAnswer() {
 function handleEvent(evt, bubble, cursor, append) {
   if (evt.type === 'sources') {
     currentSources = evt.sources || [];
-    currentFeedbackPrompt = !!evt.feedbackPrompt;
   } else if (evt.type === 'delta') {
     append(evt.text);
     cursor.insertAdjacentText('beforebegin', evt.text);
@@ -379,21 +368,6 @@ async function openFeedback() {
   window.location.href = `mailto:${addr}?subject=${subject}&body=${body}`;
 }
 feedbackBtn.addEventListener('click', openFeedback);
-
-// A gentle, in-voice invitation appended under an answer once a visitor has
-// asked a lot (the server signals this once, per the per-IP meter).
-function renderFeedbackInvite() {
-  const wrap = el('div', 'feedback-invite');
-  wrap.appendChild(
-    document.createTextNode('You have put many questions to the anatomist. If it please you, ')
-  );
-  const btn = el('button', 'feedback-invite-link', 'send him your thoughts');
-  btn.type = 'button';
-  btn.addEventListener('click', openFeedback);
-  wrap.appendChild(btn);
-  wrap.appendChild(document.createTextNode('.'));
-  return wrap;
-}
 
 // ---------- startup ----------
 // Lock the composer until access is confirmed, then check access.

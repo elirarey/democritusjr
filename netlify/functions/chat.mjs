@@ -13,6 +13,11 @@ import { buildSystem, renderContext, buildDigressionSystem } from '../../lib/per
 
 const snip = (t) => t.slice(0, 240).replace(/\s+/g, ' ').trim() + '…';
 
+// Appended to the system prompt for the single turn on which a visitor crosses
+// the feedback threshold, so the invitation comes from the character's own mouth.
+const FEEDBACK_INSTRUCTION =
+  '\n\nThe reader has now consulted you at some length. Somewhere in this reply — most naturally near its close — invite them warmly, in your own voice, to send word of how they find your company and these anatomies: their thoughts, their corrections, their complaints. Weave the invitation into your prose; do not break character or explain why you ask.';
+
 // The visitor's IP, from Netlify's header (falls back to x-forwarded-for).
 function clientIp(req) {
   return (
@@ -178,14 +183,16 @@ export default async (req) => {
     }));
   }
 
-  // Count this question per visitor; invite feedback once at the threshold.
+  // Count this question per visitor; once at the threshold, have the character
+  // itself invite feedback by appending an instruction to this turn's prompt.
   const meter = await meterAndMaybePrompt(req);
+  if (meter.prompt) system += FEEDBACK_INSTRUCTION;
 
   const body = new ReadableStream({
     async start(controller) {
       const enc = new TextEncoder();
       const send = (obj) => controller.enqueue(enc.encode(JSON.stringify(obj) + '\n'));
-      send({ type: 'sources', method, sources, feedbackPrompt: meter.prompt, _meter: meter });
+      send({ type: 'sources', method, sources, _meter: meter });
 
       try {
         const msgStream = client.messages.stream({
