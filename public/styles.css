@@ -508,3 +508,15 @@ sup.fn a:target { background: rgba(214, 178, 92, 0.45); border-radius: 2px; }
   text-decoration: underline;
 }
 .feedback-invite-link:hover { color: var(--accent-soft); }
+
+/* ---------- masthead hero image (homepage) ---------- */
+.masthead-img {
+  display: block;
+  width: 100%;
+  max-width: 380px;
+  height: auto;
+  margin: 0 auto 16px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  box-shadow: 0 2px 6px var(--shadow);
+}
