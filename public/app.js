@@ -370,7 +370,5 @@ async function openFeedback() {
 feedbackBtn.addEventListener('click', openFeedback);
 
 // ---------- startup ----------
-// Lock the composer until access is confirmed, then check access.
-input.disabled = true;
-sendBtn.disabled = true;
-init();
+// The site is open (no password gate) — the composer is ready immediately.
+input.focus();

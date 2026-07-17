@@ -95,12 +95,7 @@ const json = (obj, status = 200) =>
 export default async (req) => {
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
-  // ---- password gate ----
-  const required = process.env.SITE_PASSWORD;
-  if (required) {
-    const given = req.headers.get('x-site-password') || '';
-    if (given !== required) return json({ error: 'unauthorized' }, 401);
-  }
+  // (Password gate removed — the site is open. SITE_PASSWORD is now ignored.)
 
   // Read the raw body (robust across runtimes).
   let payload;
